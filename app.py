@@ -372,6 +372,12 @@ if not df.empty:
     st_folium(m, width=800, height=400)
     st.markdown("---")
 
+    # Download CSV
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Data Report (CSV)", csv, "water_quality_report.csv", "text/csv")
+
+    st.markdown("---")
+
     # ── Trend Analysis ─────────────────────────────
 
     st.subheader("📈 Trend Analysis")
@@ -379,19 +385,16 @@ if not df.empty:
 
     t1, t2, t3 = st.tabs(["🌡️ Temperature", "🌫️ Turbidity", "💧 TDS"])
     with t1:
-        st.line_chart(df_chart[['Temperature (°C)']])
+        st.line_chart(df_chart[['Temperature(°C)']])
     with t2:
-        st.line_chart(df_chart[['Turbidity (NTU)']])
+        st.line_chart(df_chart[['Turbidity(NTU)']])
     with t3:
-        st.line_chart(df_chart[['TDS (ppm)']])
+        st.line_chart(df_chart[['TDS(ppm)']])
 
 else:
     st.warning(
         "⏳ Fetching data from ThingSpeak... "
-        "Please check your Channel ID or wait for the ESP32 to send data."
-    )
-
-    st.markdown("---")
+        "Please check your Channel ID or wait for the ESP32 to send data.")
 # ─────────────────────────────────────────────
 # Auto-refresh every 30 seconds
 # ─────────────────────────────────────────────
