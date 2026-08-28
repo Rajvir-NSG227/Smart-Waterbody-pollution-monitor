@@ -385,11 +385,11 @@ if not df.empty:
 
     t1, t2, t3 = st.tabs(["🌡️ Temperature", "🌫️ Turbidity", "💧 TDS"])
     with t1:
-        st.line_chart(df_chart[['Temperature(°C)']])
+        st.line_chart(df_chart[['Temperature (°C)']])
     with t2:
-        st.line_chart(df_chart[['Turbidity(NTU)']])
+        st.line_chart(df_chart[['Turbidity (NTU)']])
     with t3:
-        st.line_chart(df_chart[['TDS(ppm)']])
+        st.line_chart(df_chart[['TDS (ppm)']])
 
 else:
     st.warning(
