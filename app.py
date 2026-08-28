@@ -114,12 +114,12 @@ st.markdown(f"🌡️ Temperature > **{TEMPERATURE_THRESHOLD} °C**")
 st.markdown(f"🌫️ Turbidity > **{TURBIDITY_THRESHOLD} NTU**")
 st.markdown(f"💧 TDS > **{TDS_THRESHOLD} ppm**")
 st.markdown("---")
-st.caption("Auto-refreshes every 30 seconds")
+st.caption("Auto-refreshes every 120 seconds")
 
 # ─────────────────────────────────────────────
 # 5. FETCH DATA FROM THINGSPEAK
 # ─────────────────────────────────────────────
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=120)
 def fetch_data():
     url = f"https://api.thingspeak.com/channels/{THINGSPEAK_CHANNEL_ID}/feeds.json?results=30"
     try:
@@ -396,7 +396,7 @@ else:
         "⏳ Fetching data from ThingSpeak... "
         "Please check your Channel ID or wait for the ESP32 to send data.")
 # ─────────────────────────────────────────────
-# Auto-refresh every 30 seconds
+# Auto-refresh every 120 seconds
 # ─────────────────────────────────────────────
-time.sleep(30)
+time.sleep(120)
 st.rerun()
