@@ -3,6 +3,11 @@ import pandas as pd
 import requests
 import time
 import os
+import smtplib
+import ssl
+from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from google import genai
 import folium
 from streamlit_folium import st_folium
@@ -82,6 +87,20 @@ except Exception:
 TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN or os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID   = TELEGRAM_CHAT_ID   or os.getenv("TELEGRAM_CHAT_ID", "")
 
+# ── Email credentials loaded securely from .streamlit/secrets.toml ──
+try:
+    EMAIL_SENDER   = st.secrets.get("EMAIL_SENDER",   "")
+    EMAIL_PASSWORD = st.secrets.get("EMAIL_PASSWORD", "")
+    EMAIL_RECEIVER = st.secrets.get("EMAIL_RECEIVER", "")
+except Exception:
+    EMAIL_SENDER = EMAIL_PASSWORD = EMAIL_RECEIVER = ""
+EMAIL_SENDER   = EMAIL_SENDER   or os.getenv("EMAIL_SENDER",   "")
+EMAIL_PASSWORD = EMAIL_PASSWORD or os.getenv("EMAIL_PASSWORD", "")
+EMAIL_RECEIVER = EMAIL_RECEIVER or os.getenv("EMAIL_RECEIVER", "")
+
+# Alert cooldown: minimum minutes between successive email alerts
+EMAIL_COOLDOWN_MINUTES = 15
+
 # Anomaly Thresholds
 TURBIDITY_THRESHOLD   = 50      # NTU
 TDS_THRESHOLD         = 400     # ppm
@@ -155,6 +174,117 @@ def send_telegram_alert(message):
             requests.get(url, timeout=5)
         except Exception:
             pass
+
+# ─────────────────────────────────────────────
+# 6b. EMAIL ALERT
+# ─────────────────────────────────────────────
+def send_email_alert(anomalies: dict) -> bool:
+    """
+    Send an HTML email listing all anomalous parameters.
+    Returns True on success, False on failure.
+    """
+    if not (EMAIL_SENDER and EMAIL_PASSWORD and EMAIL_RECEIVER):
+        return False
+
+    timestamp = datetime.now().strftime("%d %B %Y, %I:%M:%S %p")
+
+    # ── Build HTML rows for each anomaly ──
+    rows_html = ""
+    for param, info in anomalies.items():
+        excess = info['value'] - info['threshold']
+        rows_html += f"""
+        <tr>
+          <td style='padding:10px 16px; font-weight:600; color:#e0e0e0;'>{param}</td>
+          <td style='padding:10px 16px; color:#ff6b6b; font-weight:700;'>
+            {info['value']:.2f} {info['unit']}
+          </td>
+          <td style='padding:10px 16px; color:#8899aa;'>
+            {info['threshold']} {info['unit']}
+          </td>
+          <td style='padding:10px 16px; color:#ffa07a; font-weight:600;'>
+            +{excess:.2f} {info['unit']}
+          </td>
+        </tr>"""
+
+    html_body = f"""\
+    <html><body style='margin:0; padding:0; background:#0d1117; font-family:Inter,Arial,sans-serif;'>
+      <div style='max-width:600px; margin:30px auto; background:#161b22;
+                  border-radius:14px; overflow:hidden;
+                  border:1px solid rgba(255,80,80,0.3);'>
+
+        <!-- Header -->
+        <div style='background:linear-gradient(135deg,#1a0000,#3d0000);
+                    padding:28px 32px; text-align:center;'>
+          <h1 style='margin:0; color:#ff6b6b; font-size:1.6rem;'>⚠️ Water Quality Alert</h1>
+          <p style='margin:6px 0 0; color:#cc8888; font-size:0.9rem;'>
+            Smart Waterbody Pollution Monitor — Telibandha Lake, Raipur
+          </p>
+        </div>
+
+        <!-- Body -->
+        <div style='padding:28px 32px;'>
+          <p style='color:#ccddee; margin-top:0;'>
+            The IoT monitoring buoy has detected <b style='color:#ff6b6b;'>
+            {len(anomalies)} anomalous parameter(s)</b> that exceed safe thresholds.
+            Immediate attention may be required.
+          </p>
+
+          <!-- Table -->
+          <table style='width:100%; border-collapse:collapse; margin:16px 0;
+                        background:#0d1117; border-radius:10px; overflow:hidden;'>
+            <thead>
+              <tr style='background:#1f2937;'>
+                <th style='padding:10px 16px; text-align:left; color:#8899aa;
+                           font-size:0.8rem; letter-spacing:1px;'>PARAMETER</th>
+                <th style='padding:10px 16px; text-align:left; color:#8899aa;
+                           font-size:0.8rem; letter-spacing:1px;'>MEASURED</th>
+                <th style='padding:10px 16px; text-align:left; color:#8899aa;
+                           font-size:0.8rem; letter-spacing:1px;'>SAFE LIMIT</th>
+                <th style='padding:10px 16px; text-align:left; color:#8899aa;
+                           font-size:0.8rem; letter-spacing:1px;'>EXCESS</th>
+              </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+          </table>
+
+          <p style='color:#8899aa; font-size:0.85rem; margin-bottom:0;'>
+            🕐 Detected at: <b style='color:#aabbcc;'>{timestamp}</b>
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style='background:#0d1117; padding:16px 32px; text-align:center;
+                    border-top:1px solid #21262d;'>
+          <p style='color:#4a5568; font-size:0.78rem; margin:0;'>
+            Sent automatically by Smart Waterbody Monitor · Do not reply to this email
+          </p>
+        </div>
+      </div>
+    </body></html>"""
+
+    subject = (
+        f"⚠️ WATER ALERT — "
+        + ", ".join(
+            f"{p}: {i['value']:.1f} {i['unit']}" for p, i in anomalies.items()
+        )
+        + " | Telibandha Lake"
+    )
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = f"Smart Water Monitor <{EMAIL_SENDER}>"
+    msg["To"]      = EMAIL_RECEIVER
+    msg.attach(MIMEText(html_body, "html"))
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
+        return True
+    except Exception as e:
+        st.warning(f"📧 Email alert failed: {e}")
+        return False
 
 # ─────────────────────────────────────────────
 # 7. GEMINI AI — Waterbody Cleaning Suggestions
@@ -269,25 +399,55 @@ if not df.empty:
 
     if turb_val > TURBIDITY_THRESHOLD:
         st.error(f"🌫️ HIGH TURBIDITY: {turb_val:.1f} NTU  (threshold: {TURBIDITY_THRESHOLD} NTU)")
-        if not alert_sent:
-            send_telegram_alert(
-                f"⚠️ WATER ALERT: High Turbidity ({turb_val:.1f} NTU) at Telibandha Lake!"
-            )
-            alert_sent = True
         anomalies['Turbidity'] = {
             'value': turb_val, 'threshold': TURBIDITY_THRESHOLD, 'unit': 'NTU'
         }
 
     if tds_val > TDS_THRESHOLD:
         st.error(f"💧 HIGH TDS: {tds_val:.1f} ppm  (threshold: {TDS_THRESHOLD} ppm)")
-        if not alert_sent:
-            send_telegram_alert(
-                f"⚠️ WATER ALERT: High TDS ({tds_val:.1f} ppm) at Telibandha Lake!"
-            )
-            alert_sent = True
         anomalies['TDS'] = {
             'value': tds_val, 'threshold': TDS_THRESHOLD, 'unit': 'ppm'
         }
+
+    # ── Send Telegram alert for ALL anomalies (fixed: now includes Temperature) ──
+    if anomalies and not alert_sent:
+        alert_parts = ", ".join(
+            f"{p}: {i['value']:.1f} {i['unit']}" for p, i in anomalies.items()
+        )
+        send_telegram_alert(
+            f"⚠️ WATER ALERT at Telibandha Lake!\n{alert_parts}"
+        )
+        alert_sent = True
+
+    # ── Send Email alert with cooldown ────────────────────────────────────────
+    if anomalies:
+        # Initialise session state for cooldown tracking
+        if "last_email_sent" not in st.session_state:
+            st.session_state.last_email_sent = None
+
+        now = datetime.now()
+        cooldown_ok = (
+            st.session_state.last_email_sent is None
+            or now - st.session_state.last_email_sent
+               >= timedelta(minutes=EMAIL_COOLDOWN_MINUTES)
+        )
+
+        if cooldown_ok:
+            email_ok = send_email_alert(anomalies)
+            if email_ok:
+                st.session_state.last_email_sent = now
+                st.toast(
+                    f"📧 Email alert sent to {EMAIL_RECEIVER}!",
+                    icon="✅"
+                )
+        else:
+            minutes_left = EMAIL_COOLDOWN_MINUTES - int(
+                (now - st.session_state.last_email_sent).total_seconds() / 60
+            )
+            st.caption(
+                f"📧 Next email alert in ≈ {minutes_left} min "
+                f"(cooldown: {EMAIL_COOLDOWN_MINUTES} min)"
+            )
 
     if not anomalies:
         st.success("✅ All parameters are within normal range. Waterbody is healthy.")
