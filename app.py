@@ -33,25 +33,30 @@ st.markdown(
             animation: blinker 1.2s ease-in-out infinite;
             margin-right: 8px;
             box-shadow: 0 0 6px #00ff88;
+            flex-shrink: 0;
         }
         .live-badge {
-            position: fixed;
-            bottom: 18px;
-            right: 18px;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            padding: 6px 14px;
-            background: rgba(10, 20, 30, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 255, 136, 0.35);
-            border-radius: 20px;
+            position: fixed !important;
+            bottom: 18px !important;
+            right: 18px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 6px 14px !important;
+            background: rgba(10, 20, 30, 0.92) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border: 1px solid rgba(0, 255, 136, 0.4) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 2px 12px rgba(0,255,136,0.15) !important;
+            pointer-events: none !important;
         }
         .live-badge span.live-text {
-            font-size: 0.78rem;
-            color: #00ff88;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            font-size: 0.78rem !important;
+            color: #00ff88 !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.5px !important;
+            font-family: 'Inter', sans-serif !important;
         }
     </style>
     <div class="live-badge">
