@@ -383,7 +383,7 @@ Keep the response practical, concise, and directly tied to the specific paramete
 """
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash-8b",
+            model="gemini-3.5-flash-lite",
             contents=prompt
         )
         return response.text
@@ -554,7 +554,7 @@ if not df.empty:
                     <span style="color:#00d4aa; font-size:1.2rem; font-weight:700;">
                         AI Remediation Report
                     </span>
-                    <span class="ai-badge">Gemini 1.5 Flash Lite</span>
+                    <span class="ai-badge">Gemini 3.5 Flash Lite</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
