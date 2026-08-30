@@ -20,6 +20,47 @@ st.set_page_config(
     page_icon="🌊",
     layout="wide"
 )
+st.markdown(
+    """
+    <style>
+        @keyframes blinker { 50% { opacity: 0; } }
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #00ff88;
+            border-radius: 50%;
+            display: inline-block;
+            animation: blinker 1.2s ease-in-out infinite;
+            margin-right: 8px;
+            box-shadow: 0 0 6px #00ff88;
+        }
+        .live-badge {
+            position: fixed;
+            bottom: 18px;
+            right: 18px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            padding: 6px 14px;
+            background: rgba(10, 20, 30, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 255, 136, 0.35);
+            border-radius: 20px;
+        }
+        .live-badge span.live-text {
+            font-size: 0.78rem;
+            color: #00ff88;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+    </style>
+    <div class="live-badge">
+        <span class="live-dot"></span>
+        <span class="live-text">LIVE &nbsp;·&nbsp; Node-1</span>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ─────────────────────────────────────────────
 # 2. CUSTOM CSS — Premium Dark Theme
