@@ -37,7 +37,7 @@ st.markdown(
         }
         .live-badge {
             position: fixed !important;
-            bottom: 18px !important;
+            bottom: 60px !important; 
             right: 18px !important;
             z-index: 999999 !important;
             display: flex !important;
