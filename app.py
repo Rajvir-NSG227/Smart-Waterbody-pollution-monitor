@@ -517,17 +517,35 @@ if not df.empty:
         )
         st.markdown(" ")
 
-        if st.button(
-            "🤖 Get AI Cleaning Suggestions",
-            type="primary",
-            use_container_width=True,
-            key="ai_btn"
-        ):
-            with st.spinner(
-                "🧠 Gemini AI is analysing water conditions and generating a remediation plan..."
-            ):
-                suggestion = get_ai_cleaning_suggestions(anomalies)
+        # Initialize session state for AI suggestion
+        if "ai_suggestion" not in st.session_state:
+            st.session_state.ai_suggestion = None
+        if "ai_suggestion_time" not in st.session_state:
+            st.session_state.ai_suggestion_time = None
 
+        col_btn1, col_btn2 = st.columns([3, 1])
+        with col_btn1:
+            if st.button(
+                "🤖 Get AI Cleaning Suggestions",
+                type="primary",
+                use_container_width=True,
+                key="ai_btn"
+            ):
+                with st.spinner(
+                    "🧠 Gemini AI is analysing water conditions and generating a remediation plan..."
+                ):
+                    st.session_state.ai_suggestion = get_ai_cleaning_suggestions(anomalies)
+                    st.session_state.ai_suggestion_time = time.strftime('%H:%M:%S, %d %B %Y')
+
+        with col_btn2:
+            if st.session_state.ai_suggestion:
+                if st.button("🗑️ Clear", use_container_width=True, key="ai_clear_btn"):
+                    st.session_state.ai_suggestion = None
+                    st.session_state.ai_suggestion_time = None
+                    st.rerun()
+
+        # Display persisted suggestion
+        if st.session_state.ai_suggestion:
             # Styled AI header banner
             st.markdown("""
             <div class="ai-panel">
@@ -543,12 +561,15 @@ if not df.empty:
 
             # Render AI output (markdown-aware)
             st.info("📋 **AI-Generated Remediation Plan** — Tailored to live sensor anomalies")
-            st.markdown(suggestion)
+            st.markdown(st.session_state.ai_suggestion)
             st.caption(
-                f"⏱️ Generated at {time.strftime('%H:%M:%S, %d %B %Y')} | "
+                f"⏱️ Generated at {st.session_state.ai_suggestion_time} | "
                 "Powered by Google Gemini AI"
             )
     else:
+        # Clear suggestion if anomalies are resolved
+        if "ai_suggestion" in st.session_state:
+            st.session_state.ai_suggestion = None
         st.markdown("""
         <div style='background:rgba(0,212,170,0.06); border:1px solid rgba(0,212,170,0.2);
         border-radius:12px; padding:20px; text-align:center; color:#00d4aa;'>
